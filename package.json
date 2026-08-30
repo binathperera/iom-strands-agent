@@ -1,0 +1,23 @@
+{
+  "name": "iom-strands-agent",
+  "version": "1.0.0",
+  "description": "Inventory Operations Manager Agent",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/binathperera/iom-strands-agent.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/binathperera/iom-strands-agent/issues"
+  },
+  "homepage": "https://github.com/binathperera/iom-strands-agent#readme",
+  "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^5.0.67",
+    "@strands-agents/sdk": "^1.15.0"
+  }
+}
