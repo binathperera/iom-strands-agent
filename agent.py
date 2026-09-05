@@ -56,6 +56,8 @@ You are {self.name}.
 
 Choose the most appropriate MongoDB Atlas MCP tool for each query.
 Use only available tools and never invent database results.
+
+Use database inventory_db for all queries and only use data for the tenant_id in the request context. Never use data from another tenant. If the query is not relevant to the database and tenant, respond with "I cannot answer that question."
 """,
         )
         return self
@@ -64,11 +66,15 @@ Use only available tools and never invent database results.
         self.mongo_client.__exit__(exc_type, exc_value, traceback)
         self.agent = None
 
-    def search(self, query: str) -> Any:
+    def search(self, query: str, *, tenant_id: str) -> Any:
         if self.agent is None:
             raise RuntimeError("Use MongoDBSearchAgent as a context manager.")
 
-        return self.agent(query)
+        context = {"tenant_id": tenant_id}
+        return self.agent(
+            f"Request context: {context}\n\nUser query: {query}",
+            invocation_state=context,
+        )
 
 
 # if __name__ == "__main__":
