@@ -46,7 +46,7 @@ class InventoryOperationsManagerAgent:
         )
         self.java_mcp_client = None
         if authorization_token:
-            java_mcp_url = os.getenv("JAVA_MCP_URL", "http://localhost/mcp")
+            java_mcp_url = os.getenv("JAVA_MCP_URL", "http://localhost:8080/mcp")
             self.java_mcp_client = MCPClient(
                 url=java_mcp_url,
                 headers={"Authorization": f"Bearer {authorization_token}"},
@@ -82,11 +82,14 @@ For other actions such as performing additions, updates and deletions use the Ja
         self.mongo_client.__exit__(exc_type, exc_value, traceback)
         self.agent = None
 
-    def search(self, query: str, *, tenant_id: str) -> Any:
+    def search(self, query: str, *, tenant_id: str, roles: list[str]) -> Any:
         if self.agent is None:
             raise RuntimeError("Use InventoryOperationsManagerAgent as a context manager.")
 
-        context = {"tenant_id": tenant_id}
+        context = {
+            "tenant_id": tenant_id,
+            "roles": roles,
+        }
         return self.agent(
             f"Request context: {context}\n\nUser query: {query}",
             invocation_state=context,

@@ -35,7 +35,7 @@ class QueryRequest(BaseModel):
 
 def get_token_context(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-) -> tuple[str, str]:
+) -> tuple[str, str, list[str]]:
     if credentials is None:
         raise HTTPException(status_code=401, detail="Bearer token is required")
     if not JWT_SECRET:
@@ -54,7 +54,11 @@ def get_token_context(
     if not isinstance(tenant_id, str) or not tenant_id:
         raise HTTPException(status_code=401, detail="Token is missing tenant id")
 
-    return credentials.credentials, tenant_id
+    roles = claims.get("roles", [])
+    if not isinstance(roles, list):
+        roles = []
+
+    return credentials.credentials, tenant_id, roles
 
 
 @app.get("/health")
@@ -65,18 +69,19 @@ def health():
 @app.post("/query")
 def query(
     request: QueryRequest,
-    token_context: tuple[str, str] = Depends(get_token_context),
+    token_context: tuple[str, str, list[str]] = Depends(get_token_context),
 ):
     if mongo_agent is None:
         raise HTTPException(status_code=503, detail="Agent unavailable")
 
-    authorization_token, tenant_id = token_context
+    authorization_token, tenant_id, roles = token_context
     with InventoryOperationsManagerAgent(
         authorization_token=authorization_token,
     ) as search_agent:
         agent_result = search_agent.search(
             request.query,
             tenant_id=tenant_id,
+            roles=roles,
         )
     
     return {"result": str(agent_result)}
