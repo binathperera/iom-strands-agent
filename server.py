@@ -7,7 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
-from agent import MongoDBSearchAgent
+from agent import InventoryOperationsManagerAgent
 
 load_dotenv()
 
@@ -20,7 +20,7 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 async def lifespan(app: FastAPI):
     global mongo_agent
 
-    with MongoDBSearchAgent() as mongo_agent:
+    with InventoryOperationsManagerAgent() as mongo_agent:
         yield
 
     mongo_agent = None
@@ -35,7 +35,7 @@ class QueryRequest(BaseModel):
 
 def get_token_context(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-) -> str:
+) -> tuple[str, str]:
     if credentials is None:
         raise HTTPException(status_code=401, detail="Bearer token is required")
     if not JWT_SECRET:
@@ -54,7 +54,7 @@ def get_token_context(
     if not isinstance(tenant_id, str) or not tenant_id:
         raise HTTPException(status_code=401, detail="Token is missing tenant id")
 
-    return tenant_id
+    return credentials.credentials, tenant_id
 
 
 @app.get("/health")
@@ -70,10 +70,13 @@ def query(
     if mongo_agent is None:
         raise HTTPException(status_code=503, detail="Agent unavailable")
 
-    with MongoDBSearchAgent() as search_agent:
+    authorization_token, tenant_id = token_context
+    with InventoryOperationsManagerAgent(
+        authorization_token=authorization_token,
+    ) as search_agent:
         agent_result = search_agent.search(
             request.query,
-            tenant_id=token_context,
+            tenant_id=tenant_id,
         )
     
     return {"result": str(agent_result)}
