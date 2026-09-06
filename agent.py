@@ -1,6 +1,8 @@
+# Description: Agent code for the Inventory Operations Manager Agent FastAPI application.
+# Configuration:
+#              See README.md for required environment variables.
 import os
 from typing import Any, Optional
-
 from mcp.client.stdio import stdio_client, StdioServerParameters
 from strands import Agent
 from strands.tools.mcp import MCPClient
@@ -41,14 +43,17 @@ class InventoryOperationsManagerAgent:
             ],
         )
 
+        #Client 1 for the local MongoDB MCP server via stdio
         self.mongo_client = MCPClient(
             lambda: stdio_client(self.server_params)
         )
+
+        #Client 2 for the remote inventory MCP server via HTTP
         self.java_mcp_client = None
         if authorization_token:
-            java_mcp_url = os.getenv("JAVA_MCP_URL", "http://localhost:8080/mcp")
+            inventory_mcp_url = os.getenv("INVENTORY_MCP_URL", "http://localhost:8080/mcp")
             self.java_mcp_client = MCPClient(
-                url=java_mcp_url,
+                url=inventory_mcp_url,
                 headers={"Authorization": f"Bearer {authorization_token}"},
                 prefix="java",
             )
@@ -95,7 +100,7 @@ For other actions such as performing additions, updates and deletions use the Ja
             invocation_state=context,
         )
 
-
+# To test the agent independently, you can uncomment the following code block and run this script directly.
 # if __name__ == "__main__":
 #     with InventoryOperationsManagerAgent() as agent:
 #         # Get query from user input

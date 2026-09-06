@@ -1,38 +1,40 @@
+# Description: Server code for the Inventory Operations Manager Agent FastAPI application.
+# Configuration:
+#              See README.md for required environment variables.
+
 from contextlib import asynccontextmanager
 import os
-
+from dotenv import load_dotenv
 import jwt
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from dotenv import load_dotenv
 from pydantic import BaseModel
-
 from agent import InventoryOperationsManagerAgent
 
-load_dotenv()
+load_dotenv() #In case you want to use a .env file for local development, this will load the environment variables from it.
 
-mongo_agent = None
-bearer_scheme = HTTPBearer(auto_error=False)
-JWT_SECRET = os.getenv("JWT_SECRET")
+mongo_agent = None # Global variable to hold the InventoryOperationsManagerAgent instance
+bearer_scheme = HTTPBearer(auto_error=False) # Define the HTTP Bearer authentication scheme
+JWT_SECRET = os.getenv("JWT_SECRET") # Load the JWT secret from environment variables
 
-
+#Define a lifespan context manager for the FastAPI application 
+#to manage the lifecycle behaviour of the application
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global mongo_agent
-
+    # Initialize the InventoryOperationsManagerAgent
     with InventoryOperationsManagerAgent() as mongo_agent:
-        yield
+        # The agent is now available for handling requests
+        yield 
+    mongo_agent = None # Clean up the InventoryOperationsManagerAgent instance when the application shuts down
 
-    mongo_agent = None
+app = FastAPI(title="Inventory Operations Manager Agent", lifespan=lifespan)
 
-
-app = FastAPI(title="MongoDB Strands Agent", lifespan=lifespan)
-
-
+#define a Pydantic model for the query request
 class QueryRequest(BaseModel):
-    query: str
+    query: str #query will be a string containing the natural language query to be processed by the agent
 
-
+#Define a dependency function to extract and validate the JWT token from the request headers
 def get_token_context(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> tuple[str, str, list[str]]:
@@ -60,12 +62,21 @@ def get_token_context(
 
     return credentials.credentials, tenant_id, roles
 
+# API endpoint definitions for the FastAPI application
+# <100: Not used
+# 1xx: Informational Responses
+# 2xx: Successful Responses
+# 3xx: Redirection Messages
+# 4xx: Client Error Responses
+# 5xx: Server Error Responses
+# 600-999: Not used
 
+# Define a health check endpoint to verify that the application is running
 @app.get("/health")
 def health():
     return {"status": "healthy"}
 
-
+# Define a query endpoint to process natural language queries using the InventoryOperationsManagerAgent
 @app.post("/query")
 def query(
     request: QueryRequest,
